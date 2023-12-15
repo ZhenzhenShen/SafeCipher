@@ -30,6 +30,15 @@ public class DES {
         byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt);
         return Base64.getEncoder().encodeToString(byteCipherText);
     }
+    
+    public String encrypt(String strDataToEncrypt, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+        Cipher desCipher = Cipher.getInstance("DES");
+        desCipher.init(Cipher.ENCRYPT_MODE, key);
+        byte[] byteDataToEncrypt = strDataToEncrypt.getBytes();
+        byte[] byteCipherText = desCipher.doFinal(byteDataToEncrypt);
+        return Base64.getEncoder().encodeToString(byteCipherText);
+}
 
     public String decrypt(String strCipherText) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
