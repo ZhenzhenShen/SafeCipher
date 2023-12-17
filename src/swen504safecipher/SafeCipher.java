@@ -15,25 +15,26 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
-
+import java.util.Optional;
 import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.sql.Connection;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
@@ -69,8 +70,11 @@ public class SafeCipher extends Application {
     private String userNameCurrent = "";
     private SecretKey masterKey;
     private Label hintLabel = new Label("");
-	
-	
+    private String selectedMethod;
+    private ComboBox<String> methodComboBox = new ComboBox<>(); 
+    private ComboBox<String> saveComboBox;
+    private ComboBox<String> loadComboBox;
+
     private Scene createLoginScene(Stage primaryStage) {
     	
     	    VBox loginLayout = new VBox(10);
@@ -106,9 +110,15 @@ public class SafeCipher extends Application {
     	    });
     	    Button signUpButton = new Button("Sign Up");
     	    signUpButton.setOnAction(e -> {
-    	        // TODO: 验证用户名和密码
-    	        // 如果验证成功，显示主界面
-    	        primaryStage.setScene(createMainScene());
+    	    	String username = usernameField.getText(); // 假设 usernameField 是用户名输入字段
+    	        String password = passwordField.getText(); // 假设 passwordField 是密码输入字段
+
+    	        // 调用 signUpUser 方法并获取结果
+    	        String resultMessage = signUpUser(username, password);
+
+    	        // 显示结果消息
+    	        message.setText(resultMessage); // 假设 message 是用来显示消息的 Label
+    	       
     	    });
     	    HBox buttonsLS = new HBox();
     	    buttonsLS.setSpacing(10);
@@ -143,14 +153,19 @@ public class SafeCipher extends Application {
     
     private Scene createMainScene() {
        	
+    	hintLabel.setStyle("-fx-text-fill: red;");
+    	hintLabel.setFont(new Font(20));
+
         HBox root = new HBox();
         
-       
-    //    root.setStyle("-fx-background-color:  #d6d6cd;"); 
+        saveComboBox = new ComboBox<>();
+        loadComboBox = new ComboBox<>();
+        // 确保这些组件在添加项目之前已经初始化
+        
         root.setAlignment(Pos.CENTER);
         
         hintLabel.setPrefHeight(50);
-       
+        Label backgroundLabel = new Label("Choose background color");
      // 创建ColorPicker组件
         ColorPicker colorPicker = new ColorPicker();
 
@@ -201,8 +216,6 @@ public class SafeCipher extends Application {
         Button encoButton = new Button("ENCRYPT");
         Button decoButton = new Button("DECRYPT");
         enDeBtnBox.getChildren().addAll(encoButton, decoButton);
-        // ComboBox for selecting the encryption method
-        ComboBox<String> methodComboBox = new ComboBox<>();
         methodComboBox.getItems().addAll("Caesar Cipher", "DES", "AES");
         HBox keyBox = new HBox(20);
         Label keyLabel = new Label("Key:");
@@ -217,19 +230,17 @@ public class SafeCipher extends Application {
         
         HBox saveCloud = new HBox(20);
         Label saveLabel = new Label("Tag:");
-        TextField saveTextField = new TextField();
+        saveComboBox.setPrefWidth(190);
+        saveComboBox.setEditable(true);
         Button saveKeyCloudButton = new Button("Save Key to Cloud");
-        saveCloud.getChildren().addAll(saveLabel,saveTextField,saveKeyCloudButton);
+        saveCloud.getChildren().addAll(saveLabel,saveComboBox,saveKeyCloudButton);
         HBox loadCloud = new HBox(20);
         Label loadLabel = new Label("Tag:");
-       // ComboBox<String> loadComboBox = new ComboBox<>();
-      //  loadComboBox.setEditable(false);
-        TextField loadTextField = new TextField();
+        loadComboBox.setPrefWidth(190);
         Button loadKeyCloudButton = new Button("Load Key from Cloud");
-     //   loadCloud.getChildren().addAll(loadLabel,loadComboBox,loadKeyCloudButton);
-        loadCloud.getChildren().addAll(loadLabel,loadTextField,loadKeyCloudButton);
+        loadCloud.getChildren().addAll(loadLabel,loadComboBox,loadKeyCloudButton);
         saveLoadCloudButtons.getChildren().addAll(saveCloud,loadCloud);
-        middle.getChildren().addAll( methodComboBox,keyBox,enDeBtnBox,saveLoadLocalButtons,saveLoadCloudButtons,hintLabel,colorPicker);
+        middle.getChildren().addAll( methodComboBox,keyBox,enDeBtnBox,saveLoadLocalButtons,saveLoadCloudButtons,hintLabel,backgroundLabel,colorPicker);
 
         VBox right = new VBox(10);
         right.setPadding(new Insets(15));
@@ -245,7 +256,8 @@ public class SafeCipher extends Application {
 
      // ComboBox event handler
         methodComboBox.setOnAction(e -> {
-            String selectedMethod = methodComboBox.getValue();
+            selectedMethod = methodComboBox.getValue();
+           
             System.out.println("Selected encryption method: " + selectedMethod);
             if ("Caesar Cipher".equals(selectedMethod)) {
                 keyLabel.setVisible(true);
@@ -257,12 +269,13 @@ public class SafeCipher extends Application {
                 keyInput.setVisible(false);
                 saveLoadLocalButtons.setVisible(true);
                 saveLoadCloudButtons.setVisible(true);
+                populateComboBoxes();
             }
         });
 
         // ENCRYPT button event handler
         encoButton.setOnAction(e -> {
-            String selectedMethod = methodComboBox.getValue();
+           selectedMethod = methodComboBox.getValue();
             if ("Caesar Cipher".equals(selectedMethod)) {
                 try {
                     int key = Integer.parseInt(keyInput.getText());
@@ -311,7 +324,7 @@ public class SafeCipher extends Application {
 
         // DECRYPT button event handler
         decoButton.setOnAction(e -> {
-            String selectedMethod = methodComboBox.getValue();
+            selectedMethod = methodComboBox.getValue();
             if ("Caesar Cipher".equals(selectedMethod)) {
                 try {
                     int key = Integer.parseInt(keyInput.getText());
@@ -355,7 +368,7 @@ public class SafeCipher extends Application {
        
         // 在createMainScene方法中添加以下代码
         saveKeyLocalButton.setOnAction(e -> {
-            String selectedMethod = methodComboBox.getValue();
+            selectedMethod = methodComboBox.getValue();
             if ("DES".equals(selectedMethod)) {
                 saveKeyUsingFileChooser(desKey, "DES");
             } else if ("AES".equals(selectedMethod)) {
@@ -364,7 +377,7 @@ public class SafeCipher extends Application {
         });
 
         loadKeyLocalButton.setOnAction(e -> {
-            String selectedMethod = methodComboBox.getValue();
+            selectedMethod = methodComboBox.getValue();
             if ("DES".equals(selectedMethod)) {
                 loadKeyUsingFileChooser("DES");
             } else if ("AES".equals(selectedMethod)) {
@@ -375,41 +388,40 @@ public class SafeCipher extends Application {
         });
         
         saveKeyCloudButton.setOnAction(e ->{
-        	hintLabel.setText("");
-        	/*
-        	String tag = saveTextField.getText();
-        	if(!loadComboBox.getItems().contains(tag)) {
-        		loadComboBox.getItems().add(tag);
-        	}
-        	*/
         	
-        	String selectedMethod = methodComboBox.getValue();
-            if ("DES".equals(selectedMethod)) {
-                try {
-					saveKeytoCloud(desKey, userNameCurrent, saveTextField.getText(),methodComboBox.getValue());
-				} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException
-						| IllegalBlockSizeException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-            } else if("AES".equals(selectedMethod)){
-            	try {
-					saveKeytoCloud(aesKey, userNameCurrent, saveTextField.getText(),methodComboBox.getValue());
-				} catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException | BadPaddingException
-						| IllegalBlockSizeException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-            } else{
-               hintLabel.setText("Select \"DES\" OR \"AES\" Method");
+        	hintLabel.setText("");       
+            selectedMethod = methodComboBox.getValue();
+            if (selectedMethod == null) {
+                hintLabel.setText("Select \"DES\" OR \"AES\" Method");
+                return;
             }
+            
+            Key currentKey = "DES".equals(selectedMethod) ? desKey : aesKey;
+            if (currentKey == null) {
+                hintLabel.setText("Please press \"ENCRYPT\" button first!");
+                return;
+            }
+
+            String enteredTag = saveComboBox.getValue(); // 获取ComboBox的当前值
+            if (enteredTag == null || enteredTag.trim().isEmpty()) {
+                hintLabel.setText("Please enter a tag!");
+                return;
+            }
+
+            try {
+                handleTagEntry(enteredTag, currentKey); // 处理标签条目
+            } catch (Exception ex) {
+                ex.printStackTrace(); // 更好的异常处理
+            }
+                
+            populateComboBoxes();
         });
         
         loadKeyCloudButton.setOnAction(e->{
         	hintLabel.setText("");
-        	String selectedMethod = methodComboBox.getValue();
+        	selectedMethod = methodComboBox.getValue();
         	  if ("DES".equals(selectedMethod)||"AES".equals(selectedMethod)) {
-        		  loadKeyfromCloud(userNameCurrent, loadTextField.getText(),methodComboBox.getValue());
+        		  loadKeyfromCloud(userNameCurrent, loadComboBox.getValue(),methodComboBox.getValue());
               } else {
             	  hintLabel.setText("Select \"DES\" OR \"AES\" Method");
               }
@@ -417,9 +429,7 @@ public class SafeCipher extends Application {
         
         return new  Scene(root, 1300, 600);
     }
-    
-    
-    
+      
     private void saveKeyUsingFileChooser(Key key, String algorithm) {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save " + algorithm + " Key");
@@ -520,11 +530,34 @@ public class SafeCipher extends Application {
         }).start();
     }
     
+    public String signUpUser(String newUsername, String newPassword) {
+        String checkUserSql = "SELECT COUNT(*) FROM user WHERE username = ?";
+
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement checkUserStmt = connection.prepareStatement(checkUserSql)) {
+            
+            checkUserStmt.setString(1, newUsername);
+            try (ResultSet resultSet = checkUserStmt.executeQuery()) {
+                if (resultSet.next() && resultSet.getInt(1) > 0) {
+                    return "Username already exists. Please choose a different username."; // 用户名已存在
+                }
+            }
+
+            insertUser(new User(newUsername, newPassword));
+            
+            return "User registered successfully, you could now log in."; // 用户注册成功
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Database error occurred. Please try again."; // 数据库错误
+        }
+    }
+
+    
     public void insertUser(User user) {
 
         try {
             Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            String sql = "INSERT INTO 'user' (username, password) VALUES (?, ?)";
+            String sql = "INSERT INTO `user` (username, password) VALUES (?, ?)";
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setString(1, user.getUsername());
             statement.setString(2, user.getPassword());
@@ -537,50 +570,7 @@ public class SafeCipher extends Application {
             // Handle SQL exceptions
         }
     }
-    
-    public void saveKeytoCloud(Key key,String userNameCurrent, String keyLabel,String keyType) throws NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, BadPaddingException, IllegalBlockSizeException {
-    	 
-    	 // Check if key is null
-    	    if (key == null) {
-    	        hintLabel.setText("Please press \"ENCRYPT\" button first!");
-    	        return;
-    	    }
 
-    	    // Check if keyLabel is null or empty
-    	    if (keyLabel == null || keyLabel.trim().isEmpty()) {
-    	        hintLabel.setText("Please enter a tag!");
-    	        return;
-    	    }
-    	 
-    	//Convert key to a byte array and convert byte array to Base64 string for easy storage
-    	String base64Key = Base64.getEncoder().encodeToString(key.getEncoded());
-    	
-    	DES des = new DES();
-        String encryptedKey = des.encrypt(base64Key,masterKey);
-        
-        try {
-            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            String sql = "INSERT INTO `keys` (Username, KeyLabel, KeyValue,KeyType) VALUES (?,?,?,?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setString(1, userNameCurrent);
-            statement.setString(2, keyLabel);
-            statement.setString(3, encryptedKey);
-            statement.setString(4, keyType);
-            
-            statement.executeUpdate();
-            statement.close();
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            // Handle SQL exceptions
-        }
-        System.out.println("successfully save to cloud");
-        hintLabel.setText("Successfully save key to cloud!");
-    }
-    
-
-
-    
     public void loadKeyfromCloud(String userNameCurrent, String keyLabel,String keyType) {
     	
 	    // Check if keyLabel is null or empty
@@ -588,8 +578,7 @@ public class SafeCipher extends Application {
 	        hintLabel.setText("Please enter a tag!");
 	        return;
 	    }
-    	
-    	
+    	   	
         String encryptedKey = null;
         try {
             Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
@@ -641,10 +630,142 @@ public class SafeCipher extends Application {
         }
         hintLabel.setText("Successfully loaded the key!");
     }
+    
+    public boolean checkTagExists(String userNameCurrent, String keyLabel, String keyType) {
+    	String sql = "SELECT COUNT(*) FROM `keys` WHERE KeyLabel = ? AND KeyType = ? AND Username = ?";
+        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, keyLabel);
+            statement.setString(2, keyType);
+            statement.setString(3, userNameCurrent);
+
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt(1) > 0; // 如果计数大于0，则表示存在
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // 处理异常
+        }
+        return false; // 如果出现异常或未找到记录
+    }
+    
+   public List<String> getAllTags(String userNameCurrent, String keyType){
+	   ArrayList<String> tags = new ArrayList<String>();
+	   String sql = "SELECT KeyLabel FROM `keys` WHERE Username = ? AND KeyType = ?";
+       
+       try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            PreparedStatement statement = connection.prepareStatement(sql)) {
+           
+           statement.setString(1, userNameCurrent);
+           statement.setString(2, keyType);
+
+           try (ResultSet resultSet = statement.executeQuery()) {
+        	   String tag;
+        	   while(resultSet.next()) {
+        		   tag = resultSet.getString("KeyLabel");
+        		   tags.add(tag);
+        	   }
+           }
+       } catch (SQLException e) {
+           e.printStackTrace();
+           // Consider more robust exception handling strategy here
+       }
+	   return tags;
+   }
+   
+   void populateComboBoxes() {
+	    selectedMethod = methodComboBox.getValue();
+	    List<String> tags = getAllTags(userNameCurrent,selectedMethod);
+	    setTagsInSaveComboBox(tags);
+	    setTagsInLoadComboBox(tags);
+	}
+   
+   void setTagsInSaveComboBox(List<String> tags) {
+	    saveComboBox.getItems().clear(); // Clear existing items
+	    saveComboBox.getItems().addAll(tags); // Add new tags
+	}
+   
+   void setTagsInLoadComboBox(List<String> tags) {
+	    loadComboBox.getItems().clear(); // Clear existing items
+	    loadComboBox.getItems().addAll(tags); // Add new tags
+	}
+   
+   private void handleTagEntry(String enteredTag, Key key) throws NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, BadPaddingException, IllegalBlockSizeException {
+	   
+	   String encryptedKey = encryptKeyWithMasterKey(key);
+	    if (checkTagExists(userNameCurrent, enteredTag, methodComboBox.getValue())) {
+	        // 如果标签已存在，询问用户是否覆盖
+	        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+	        alert.setTitle("Tag Exists");
+	        alert.setHeaderText("The tag '" + enteredTag + "' already exists.");
+	        alert.setContentText("Do you want to overwrite the existing key?");
+
+	        Optional<ButtonType> result = alert.showAndWait();
+	        if (result.isPresent() && result.get() == ButtonType.OK) {
+	            updateKeyValueInCloud(userNameCurrent, enteredTag, encryptedKey, methodComboBox.getValue());  
+	        } else {
+	            saveComboBox.getEditor().clear();
+	        }
+	    } else {
+	        insertKeyValueInCloud(userNameCurrent, enteredTag, encryptedKey, methodComboBox.getValue());
+	    }
+	}
+   
+   public String encryptKeyWithMasterKey(Key keyToEncrypt) throws NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, BadPaddingException, IllegalBlockSizeException {
+	    //Convert key to a byte array and convert byte array to Base64 string for easy storage
+	    String base64Key = Base64.getEncoder().encodeToString(keyToEncrypt.getEncoded());
+	    // 使用DES算法和masterKey对base64Key进行加密
+	    DES des = new DES();
+	    return des.encrypt(base64Key, masterKey);
+	}
+
+   
+   public void updateKeyValueInCloud(String username, String keyLabel, String newKeyValue, String keyType) {
+	    // 使用数据库连接更新 keyValue
+	    try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+	        String sql = "UPDATE `keys` SET KeyValue = ? WHERE Username = ? AND KeyLabel = ? AND KeyType = ?";
+	        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+	            statement.setString(1, newKeyValue);
+	            statement.setString(2, username);
+	            statement.setString(3, keyLabel);
+	            statement.setString(4, keyType);
+
+	            statement.executeUpdate();
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	        // 更详细的错误处理
+	    }
+	}
+   
+   public void insertKeyValueInCloud(String username, String keyLabel, String newKeyValue, String keyType) {
+	     
+       try {
+           Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+           String sql = "INSERT INTO `keys` (Username, KeyLabel, KeyValue,KeyType) VALUES (?,?,?,?)";
+           PreparedStatement statement = connection.prepareStatement(sql);
+           statement.setString(1, userNameCurrent);
+           statement.setString(2, keyLabel);
+           statement.setString(3, newKeyValue);
+           statement.setString(4, keyType);
+           
+           statement.executeUpdate();
+           statement.close();
+           connection.close();
+       } catch (SQLException e) {
+           e.printStackTrace();
+           // Handle SQL exceptions
+       }
+       System.out.println("successfully save to cloud");
+       hintLabel.setText("Successfully save key to cloud!");
+   }
+
 
     
     public void start(Stage primaryStage) {
-    	
+    	   	
     	masterKey = new SecretKeySpec(Base64.getDecoder().decode("1nPsGt/3uv4="), "DES");
     	this.primaryStage = primaryStage;
     	primaryStage.show();
