@@ -87,12 +87,10 @@ public class SafeCipher extends Application {
     	    titleLabel.setAlignment(Pos.CENTER);
     	    titleLabel.setPadding(new Insets(0, 0, 40, 0)); 
 
-
     	    // Create HBox for username
 	        HBox usernameBox = new HBox(10);
 	        usernameBox.setAlignment(Pos.CENTER);
-	        Label usernameLabel = new Label("Username: ");
-	       
+	        Label usernameLabel = new Label("Username: ");	       
 	        usernameField.setPromptText("Username");
 	        usernameBox.getChildren().addAll(usernameLabel, usernameField);
 
@@ -100,7 +98,6 @@ public class SafeCipher extends Application {
 	        HBox passwordBox = new HBox(10);
 	        passwordBox.setAlignment(Pos.CENTER);
 	        Label passwordLabel = new Label("Password: ");
-	        
 	        passwordField.setPromptText("Password");
 	        passwordBox.getChildren().addAll(passwordLabel, passwordField);
     	        	    
@@ -110,14 +107,14 @@ public class SafeCipher extends Application {
     	    });
     	    Button signUpButton = new Button("Sign Up");
     	    signUpButton.setOnAction(e -> {
-    	    	String username = usernameField.getText(); // 假设 usernameField 是用户名输入字段
-    	        String password = passwordField.getText(); // 假设 passwordField 是密码输入字段
+    	    	String username = usernameField.getText(); 
+    	        String password = passwordField.getText();
 
-    	        // 调用 signUpUser 方法并获取结果
+    	        // Use signUpUser method and get result message
     	        String resultMessage = signUpUser(username, password);
 
-    	        // 显示结果消息
-    	        message.setText(resultMessage); // 假设 message 是用来显示消息的 Label
+    	        //Show resultMessage
+    	        message.setText(resultMessage); 
     	       
     	    });
     	    HBox buttonsLS = new HBox();
@@ -250,11 +247,9 @@ public class SafeCipher extends Application {
         textRight.setPrefHeight(500); 
         right.getChildren().addAll(titleRight, textRight);
         
-     
-
         root.getChildren().addAll(left, middle, right);
 
-     // ComboBox event handler
+     // MethodComboBox event handler
         methodComboBox.setOnAction(e -> {
             selectedMethod = methodComboBox.getValue();
            
@@ -265,6 +260,7 @@ public class SafeCipher extends Application {
                 saveLoadLocalButtons.setVisible(false);
                 saveLoadCloudButtons.setVisible(false);
             } else {
+            	//"AES" "DES"
                 keyLabel.setVisible(false);
                 keyInput.setVisible(false);
                 saveLoadLocalButtons.setVisible(true);
@@ -366,7 +362,7 @@ public class SafeCipher extends Application {
             }
         });
        
-        // 在createMainScene方法中添加以下代码
+        // Save key local event handler
         saveKeyLocalButton.setOnAction(e -> {
             selectedMethod = methodComboBox.getValue();
             if ("DES".equals(selectedMethod)) {
@@ -769,7 +765,6 @@ public class SafeCipher extends Application {
     	masterKey = new SecretKeySpec(Base64.getDecoder().decode("1nPsGt/3uv4="), "DES");
     	this.primaryStage = primaryStage;
     	primaryStage.show();
-   // 	insertUser(new User("Michael","123"));
         Scene loginScene = createLoginScene(primaryStage);
         primaryStage.setScene(loginScene);
         primaryStage.setTitle("SafeCipher Login");     
