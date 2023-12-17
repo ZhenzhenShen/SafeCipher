@@ -60,9 +60,13 @@ public class SafeCipher extends Application {
 	private Key desKey; // Variable to store the DES key
 	private Key aesKey; // Variable to store the AES key
 	private Stage primaryStage;
-	private static final String DB_URL = "jdbc:mysql://securecipher.cg3i8aewd36j.ap-southeast-2.rds.amazonaws.com:3306/secure1?user=admin";
-    private static final String DB_USER = "admin";
-    private static final String DB_PASSWORD = "BennettM.10311031";
+	
+	//copy and paste you DB_URL, DB_USER,DB_PASSWORD HERE PLEASE. 
+	//The information are in the livedemo.pdf.
+	private static final String DB_URL = "";
+	private static final String DB_USER = "";
+	private static final String DB_PASSWORD = "";
+	
     final Label message = new Label("");
     final boolean finalLoginSuccess = false;
     private TextField usernameField = new TextField();
